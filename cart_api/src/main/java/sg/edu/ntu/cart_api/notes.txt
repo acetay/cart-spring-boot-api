@@ -1,0 +1,55 @@
+1. Q&A - Recap on the various annotations
+2. Storytelling - Intro to Databases
+3. Install MySQL in laptop 
+
+Explain the use of these annotations:
+
+Group 1:
+- @SpringBootApplication: First touchpoint of the application, 
+                            wire up all other annotations together.
+                            Main engine.
+- @RestController: Takes in incoming request and response (API Calls)
+- @Service: Backend Logics, data comes from repository
+- @Component: The parent of @Service, @RestController, etcs
+
+Group 2:
+- @RequestMapping - allow you to design the signature of your API endpoint
+                        path, method, content-type
+- @RequestBody - input parameters of the functionalites, 
+                    in the form of .json
+- @ResponseBody - output parameters of the functionalities, 
+                    in the form of .json
+
+Group 3:
+- @PathVariable Use to extract the value of the path  
+                        and assign their value to a method parameter
+
+- @Bean is used to explicitly declare a single bean, rather 
+                        than letting Spring do it 
+                        automatically as above. It decouples the 
+                        declaration of the bean from the class definition, 
+                        and lets you create and configure beans exactly how you 
+                        choose.
+
+- @Value used at the field or method/constructor parameter level,  
+                        used to inject values from properties files, 
+                        environment variables, or command line arguments 
+                        into a Spring-managed bean.
+                        
+- @Autowired used for automatic dependency injection,
+
+
+
+
+
+
+1. Boot up the spring boot container
+- @SpringBootApplication
+- @SpringBootConfiguration
+- @Bean
+- @Component
+
+2. Spring boot container in runtime
+- @Autowired
+
+3. Destroy container
