@@ -19,14 +19,17 @@ import sg.edu.ntu.cart_api.repository.ProductRepository;
 //     }
 // }
 
+// This class defines a service for creating and managing Product entities
 @Service
 public class ProductService {
 
     @Autowired
     private ProductRepository repository;
 
+    // This method creates a new Product entity by saving it to the repository
     public Product create(Product product) {
         return repository.save(product);
     }
 }
+
 
