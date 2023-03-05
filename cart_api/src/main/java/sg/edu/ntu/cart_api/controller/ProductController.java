@@ -17,61 +17,101 @@ import org.springframework.http.ResponseEntity;
 import java.util.List;
 import java.util.Optional;
 
+
 @RestController
 @RequestMapping("/products")
 public class ProductController {
 
+    // Inject the ProductService and ProductRepository dependencies
     @Autowired
     ProductService service;
 
     @Autowired
     ProductRepository repo;
+
     
+    // This method handles a GET request to retrieve all products from the database
     @RequestMapping(method = RequestMethod.GET)
-    public ResponseEntity<List<Product>> findAll(){
-        List<Product> products = (List<Product>)repo.findAll(); // fetch all products from database 
+    public ResponseEntity<List<Product>> findAll() {
+
+        // Fetch all products from the database using the repository
+        List<Product> products = (List<Product>) repo.findAll();
+
+        // Return an HTTP response with a status code of 200 OK and the list of products as the response body
         return ResponseEntity.ok().body(products);
     }
+    
 
+    // This method handles a GET request to retrieve a product by ID
     @RequestMapping(value="/{id}", method = RequestMethod.GET)
-    public ResponseEntity<Product> findById(@PathVariable int id){
-        Optional<Product> optionalProduct = repo.findById(id); // fetch product from database by ID
+    public ResponseEntity<Product> findById(@PathVariable int id) {
+
+        // Fetch the product from the database by ID using the repository
+        Optional<Product> optionalProduct = repo.findById(id);
+
+        // Check if the product was found
         if (optionalProduct.isPresent()) {
-            Product product = optionalProduct.get(); // get the product from Optional container
-            return ResponseEntity.ok().body(product); // return 200 OK status and the product in the response body
-        }else {
-            return ResponseEntity.notFound().build(); // return 404 Not Found status if product with ID is not found in the database
+            // Get the product from the Optional container
+            Product product = optionalProduct.get();
+            // Return an HTTP response with a status code of 200 OK and the product as the response body
+            return ResponseEntity.ok().body(product);
+        } else {
+            // Return an HTTP response with a status code of 404 Not Found if the product with the ID is not found in the database
+            return ResponseEntity.notFound().build();
         }
     }
 
+
+    // This method handles a POST request to create a new product
     @RequestMapping(method = RequestMethod.POST)
-    public ResponseEntity<Product> create(@RequestBody Product product){
-        Product createdProduct = service.create(product); // create the product using the service
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdProduct); // return 201 Created status and the created product in the response body
-    }
-    
-    @RequestMapping(value="/{id}", method = RequestMethod.PUT)
-    public ResponseEntity<Product> update(@RequestBody Product product, @PathVariable int id){
-        Optional<Product> optionalProduct = repo.findById(id);
-            if (optionalProduct.isPresent()) {
-                Product existingProduct = optionalProduct.get();
-                existingProduct.setName(product.getName());
-                existingProduct.setPrice(product.getPrice());
-                repo.save(existingProduct);
-            return new ResponseEntity<>(existingProduct, HttpStatus.OK);
-     }else {
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-     }
+    public ResponseEntity<Product> create(@RequestBody Product product) {
+
+        // Create the product using a service
+        Product createdProduct = service.create(product);
+
+        // Return an HTTP response with a status code of 201 Created and the created product as the response body
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdProduct);
     }
 
-    @RequestMapping(value = "/{id}", method = RequestMethod.DELETE)
-    public ResponseEntity<Void> delete(@PathVariable int id) {
-        if (repo.existsById(id)) {
-            repo.deleteById(id);
-            return new ResponseEntity<>(HttpStatus.OK);
+    
+    // This method handles a PUT request to update an existing product by ID
+    @RequestMapping(value="/{id}", method = RequestMethod.PUT)
+    public ResponseEntity<Product> update(@RequestBody Product product, @PathVariable int id) {
+
+        // Fetch the existing product from the database by ID using the repository
+        Optional<Product> optionalProduct = repo.findById(id);
+
+        // Check if the product was found
+        if (optionalProduct.isPresent()) {
+            // Get the existing product from the Optional container
+            Product existingProduct = optionalProduct.get();
+            // Update the existing product with the new product's data
+            existingProduct.setName(product.getName());
+            existingProduct.setPrice(product.getPrice());
+            // Save the updated product to the database using the repository
+            repo.save(existingProduct);
+            // Return an HTTP response with a status code of 200 OK and the updated product as the response body
+            return new ResponseEntity<>(existingProduct, HttpStatus.OK);
         } else {
+            // Return an HTTP response with a status code of 404 Not Found if the product with the ID is not found in the database
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
 
+
+    // This method handles a DELETE request to delete a product by ID
+    @RequestMapping(value = "/{id}", method = RequestMethod.DELETE)
+    public ResponseEntity<Void> delete(@PathVariable int id) {
+
+        // Check if the product exists in the database by ID using the repository
+        if (repo.existsById(id)) {
+            // Delete the product from the database by ID using the repository
+            repo.deleteById(id);
+            // Return an HTTP response with a status code of 200 OK if the product is deleted
+            return new ResponseEntity<>(HttpStatus.OK);
+        } else {
+            // Return an HTTP response with a status code of 404 Not Found if the product with the ID is not found in the database
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
 }
