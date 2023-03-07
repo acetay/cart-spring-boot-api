@@ -63,6 +63,50 @@ public class CartController {
 
         return ResponseEntity.badRequest().build();
     }
+
+    @RequestMapping(value="/decrement/{productId}", method = RequestMethod.POST)
+    public ResponseEntity decrement(@PathVariable int productId){
+
+        // Check if product id exists in product table
+        Optional<Product> optionalProduct = productRepo.findById(productId);
+        if(optionalProduct.isPresent()){
+            
+            // Check if productId exists in the cart table       
+            Optional<Cart> optionalCart = cartRepo.findByProductId(productId);
+            if(optionalCart.isPresent()){
+                Cart cartItem = optionalCart.get();
+                int currentQuantity = cartItem.getQuantity();
+                if (currentQuantity == 1) {
+                    cartRepo.delete(cartItem); // delete the record from the cart table
+                } else {
+                    cartItem.setQuantity(currentQuantity - 1); // decrement the quantity by 1
+                    cartRepo.save(cartItem);                
+                }
+                return ResponseEntity.ok().build();   
+            } else {
+                // The specified product id is not in the cart table
+                return ResponseEntity.notFound().build();
+            }
+        } else {
+            // The specified product id does not exist in the product table
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @RequestMapping(value="/clear", method = RequestMethod.POST)
+    public ResponseEntity clear(){
+
+        // Check if cart table is empty
+        long count = cartRepo.count();
+        if(count == 0) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        // Delete all cart items
+        cartRepo.deleteAll();
+        
+        return ResponseEntity.ok().build();
+    }
 }
 
 
