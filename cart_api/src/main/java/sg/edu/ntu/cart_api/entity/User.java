@@ -8,37 +8,20 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
 @Entity
-@Table(name = "cart")
-public class Cart {
-    
+@Table(name="user")
+public class User {
     @Id
     @GeneratedValue(strategy=GenerationType.IDENTITY)
     Integer id; // auto generated PK in db
-    
-    int quantity = 1;
 
-    @OneToOne
-    @JoinColumn(name="product_id")
-    Product product;
+    String email;
 
     @Column(name="created_at", updatable= false)
     Timestamp createdAt = new Timestamp(new Date().getTime());
 
-    @Column(name="user_id")
-    Integer userId;
-
-    public Integer getUserId() {
-        return userId;
-    }
-    public void setUserId(Integer userId) {
-        this.userId = userId;
-    }
-    
     public Integer getId() {
         return id;
     }
@@ -47,20 +30,12 @@ public class Cart {
         this.id = id;
     }
 
-    public int getQuantity() {
-        return quantity;
+    public String getEmail() {
+        return email;
     }
 
-    public void setQuantity(int quantity) {
-        this.quantity = quantity;
-    }
-
-    public Product getProduct() {
-        return product;
-    }
-
-    public void setProduct(Product product) {
-        this.product = product;
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public Timestamp getCreatedAt() {

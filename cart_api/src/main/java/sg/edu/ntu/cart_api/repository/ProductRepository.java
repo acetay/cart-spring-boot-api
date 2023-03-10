@@ -1,7 +1,10 @@
 package sg.edu.ntu.cart_api.repository;
 
-import org.springframework.stereotype.Repository;
+import java.util.List;
+
 import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Repository;
+
 import sg.edu.ntu.cart_api.entity.Product;
 
 @Repository

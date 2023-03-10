@@ -1,143 +1,118 @@
 package sg.edu.ntu.cart_api.controller;
 
+import java.util.List;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import sg.edu.ntu.cart_api.entity.Product;
-import sg.edu.ntu.cart_api.service.ProductService;
 import sg.edu.ntu.cart_api.repository.ProductRepository;
+// import sg.edu.ntu.cart_api.repository.ProductRepository;
+import sg.edu.ntu.cart_api.service.ProductService;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-
-import java.util.List;
-import java.util.Optional;
-
 
 @RestController
 @RequestMapping("/products")
 public class ProductController {
 
-    // Inject the ProductService and ProductRepository dependencies
     @Autowired
     ProductService service;
 
+    /*
+     * For a simple RESTful Endpoints, we do not need to use @service layer to encapsulate complex business logics.
+     * Hence, we shall @Autowired the repository directly into the controller class. As for the CartController, we will
+     * definitely use @Service class to encapsulate the logics.
+     */
     @Autowired
     ProductRepository repo;
-
     
-    // This method handles a GET request to retrieve all products from the database
+    // GET /products
     @RequestMapping(method = RequestMethod.GET)
-    public ResponseEntity<Object> findAll() {
-    
-        // Fetch all products from the database using the repository
-        List<Product> products = (List<Product>) repo.findAll();
-    
-        // Check if any products were found
-        if (!products.isEmpty()) {
-            // Return an HTTP response with a status code of 200 OK and the list of products as the response body
-            return ResponseEntity.ok().body(products);
-        } else {
-            // Return an HTTP response with a status code of 404 Not Found and a message in the response body
-            String message = "No products found in the database";
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(message);
-        }
+    public ResponseEntity<List<Product>> findAll(){
+        List<Product> products = (List) repo.findAll();
+        if(products.size() == 0) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok().body(products);
     }
-    
 
-    // This method handles a GET request to retrieve a product by ID
+    // GET /products/{id}
     @RequestMapping(value="/{id}", method = RequestMethod.GET)
-    public ResponseEntity<Product> findById(@PathVariable int id) {
-
-        // Fetch the product from the database by ID using the repository
-        Optional<Product> optionalProduct = repo.findById(id);
-
-        // Check if the product was found
-        if (optionalProduct.isPresent()) {
-            // Get the product from the Optional container
-            Product product = optionalProduct.get();
-            // Return an HTTP response with a status code of 200 OK and the product as the response body
-            return ResponseEntity.ok().body(product);
-        } else {
-            // Return an HTTP response with a status code of 404 Not Found if the product with the ID is not found in the database
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<Product> findById(@PathVariable int id){
+        Optional<Product> product = repo.findById(id);
+        if(product.isPresent()) return ResponseEntity.ok().body(product.get());
+        return ResponseEntity.notFound().build();
     }
 
-
-    // This method handles a POST request to create a new product
+    /*
+     * POST /products
+     * 
+     * Request body is expected to carry the information to create 
+     */
     @RequestMapping(method = RequestMethod.POST)
-    public ResponseEntity<Product> create(@RequestBody Product product) {
-
-        try {
-            // Create the product using a service
-            Product createdProduct = service.create(product);
-
-            // Return an HTTP response with a status code of 201 Created and the created product as the response body
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdProduct);
-        } catch (Exception e) {
-            // Return an HTTP response with a status code of 500 Internal Server Error and the error message as the response body
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+    public ResponseEntity<Product> create(@RequestBody Product product){
+        
+        try{
+            Product created = repo.save(product); // when "id" is not present, .save() will perform create operation.
+            return new ResponseEntity(repo.findById(created.getId()), HttpStatus.CREATED);
+        }catch(IllegalArgumentException iae){
+            iae.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }catch(Exception e){
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
         }
+            
     }
-    
-    // This method handles a PUT request to update an existing product by ID
+
+    /*
+     * PUT /products/{id}
+     * 
+     * Request body is expected to carry the information to update
+     */
     @RequestMapping(value="/{id}", method = RequestMethod.PUT)
-    public ResponseEntity<Product> update(@RequestBody Product product, @PathVariable int id) {
+    public ResponseEntity<Product> update(@RequestBody Product product, @PathVariable Integer id){
+        Optional<Product> currentProduct = repo.findById(id); // Optional is a utility class to handle null
+        if(currentProduct.isPresent()){ // Check if the expected object is present
+            try{
+                Product p = currentProduct.get(); // Get the object - Product
 
-        try {
-            // Fetch the existing product from the database by ID using the repository
-            Optional<Product> optionalProduct = repo.findById(id);
+                // Update the fetched product with name, description, price sent via Request Body
+                p.setName(product.getName());
+                p.setDescription(product.getDescription());
+                p.setPrice(product.getPrice());
 
-            // Check if the product was found
-            if (optionalProduct.isPresent()) {
-                // Get the existing product from the Optional container
-                Product existingProduct = optionalProduct.get();
-                // Update the existing product with the new product's data
-                existingProduct.setName(product.getName());
-                existingProduct.setPrice(product.getPrice());
-                existingProduct.setDescription(product.getDescription());
-                // Save the updated product to the database using the repository
-                repo.save(existingProduct);
-                // Return an HTTP response with a status code of 200 OK and the updated product as the response body
-                return new ResponseEntity<>(existingProduct, HttpStatus.OK);
-            } else {
-                // Return an HTTP response with a status code of 404 Not Found if the product with the ID is not found in the database
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-            }
-        } catch (Exception e) {
-            // Return an HTTP response with a status code of 500 Internal Server Error and the error message as the response body
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+                p = repo.save(p); // When "id" is present, .save() will perform update operation.
+                return ResponseEntity.ok().body(p);
+            }catch(Exception e){
+                e.printStackTrace();
+                return ResponseEntity.badRequest().build();
+            }            
         }
-    }
-
-
-
-    // This method handles a DELETE request to delete a product by ID
-    @RequestMapping(value = "/{id}", method = RequestMethod.DELETE)
-    public ResponseEntity<Void> delete(@PathVariable int id) {
-    
-        try {
-            // Check if the product exists in the database by ID using the repository
-            if (repo.existsById(id)) {
-                // Delete the product from the database by ID using the repository
-                repo.deleteById(id);
-                // Return an HTTP response with a status code of 200 OK if the product is deleted
-                return new ResponseEntity<>(HttpStatus.OK);
-            } else {
-                // Return an HTTP response with a status code of 404 Not Found if the product with the ID is not found in the database
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-            }
-        } catch (Exception e) {
-            // Return an HTTP response with a status code of 500 Internal Server Error and the error message as the response body
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-        }
+        return ResponseEntity.notFound().build();
     }
     
+    /*
+     * DELETE /products/{id}
+     */
+    @RequestMapping(value="/{id}", method = RequestMethod.DELETE)
+    public ResponseEntity delete(@PathVariable int id){
+         boolean exist = repo.existsById(id); // This is another way to check if an object exist without holding the object's data in memory
+         if(exist){
+            try{
+                repo.deleteById(id); 
+                return ResponseEntity.ok().build();
+            }catch(Exception e){
+                e.printStackTrace();
+                return ResponseEntity.badRequest().build();
+            }
+         }
+         return ResponseEntity.notFound().build();
+    }
+
 }
-
-

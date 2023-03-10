@@ -1,108 +1,94 @@
 package sg.edu.ntu.cart_api.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-
 import java.util.List;
 import java.util.Optional;
 
-import sg.edu.ntu.cart_api.repository.ProductRepository;
-import sg.edu.ntu.cart_api.repository.CartRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import sg.edu.ntu.cart_api.entity.Cart;
 import sg.edu.ntu.cart_api.entity.Product;
+import sg.edu.ntu.cart_api.exception.NotFoundException;
+import sg.edu.ntu.cart_api.repository.CartRepository;
+import sg.edu.ntu.cart_api.repository.ProductRepository;
+import sg.edu.ntu.cart_api.service.CartService;
 
 @RestController
 @RequestMapping("/carts")
 public class CartController {
+    
+    @Autowired
+    CartRepository repo;
 
-    @Autowired 
+    @Autowired
     ProductRepository productRepo;
 
     @Autowired
-    CartRepository cartRepo;
-    
+    CartService service;
+
+    /*
+     * (1) Use @RequestHeader annotation in argument
+     * (2) Declare findByUserId method in CartRepository
+     * (3) Replace .findAll() with .findByUserId(userId) in CartController.findAll
+     * (4) Insert a new record in the database
+     *      - insert into user (email) values ('ace@mail.com');
+     * (5) Update existing records in the `cart` table with the new user id
+     *      - update cart set user_id = 1;
+     */
     @RequestMapping(method=RequestMethod.GET)
-    public ResponseEntity<List<Cart>> list(){
-        List<Cart> cartRecords = (List<Cart>)cartRepo.findAll();
-
-        if(cartRecords.isEmpty()){
-            return ResponseEntity.notFound().build();
-        }
-
-        return ResponseEntity.ok().body(cartRecords);
+    public ResponseEntity<List<Cart>> findAll(@RequestHeader("user-id") int userId){
+        List<Cart> cartItems = (List<Cart>)repo.findByUserId(userId);
+        if(cartItems.size() > 0) return ResponseEntity.ok().body(cartItems);
+        return ResponseEntity.notFound().build();
     }
 
-    @RequestMapping(value="/add/{productId}", method = RequestMethod.POST)
-    public ResponseEntity add(@RequestParam Optional<Integer> quantity, @PathVariable int productId){
-
-        // Check if product id exist in product table
-        Optional<Product> optionalProduct = productRepo.findById(productId);
-        if(optionalProduct.isPresent()){
-            
-            // Check if productId exist in the cart table       
-            Optional<Cart> optionalCart = cartRepo.findByProductId(productId);
-            if(optionalCart.isPresent()){
-                Cart cartItem = optionalCart.get();
-                int currentQuantity = cartItem.getQuantity();
-                cartItem.setQuantity(quantity.orElseGet(() -> currentQuantity + 1)); // when quantity exist, set it. if not, increase by 1.                
-                cartRepo.save(cartItem);                
-            }else{
-                // create a new record in cart and set quantity to 1
-                Cart newCartItem = new Cart();
-                newCartItem.setQuantity(1);
-                newCartItem.setProduct(optionalProduct.get()); // this optional product exist, and the id value is filled.
-                cartRepo.save(newCartItem);
-            } 
-            return ResponseEntity.ok().build();   
+    @RequestMapping(value="/add/{productId}", method=RequestMethod.POST)
+    public ResponseEntity add(@PathVariable int productId, @RequestParam Optional<Integer> quantity, @RequestHeader("user-id") int userId){
+        try{
+            service.add(productId, quantity, userId);
+            return ResponseEntity.ok().build(); // When no exception is thrown means operation is successful.
+        }catch(NotFoundException nfe){
+            nfe.printStackTrace();
+            return ResponseEntity.notFound().build(); // Return 404 if NotFoundException is thrown.
+        }catch(Exception e){
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build(); // Return 500 if any other unexpected exception is thrown.
         }
-
-        return ResponseEntity.badRequest().build();
     }
 
-    @RequestMapping(value="/remove/{productId}", method = RequestMethod.POST)
-    public ResponseEntity remove(@PathVariable int productId){
+    @RequestMapping(value="/decrement/{productId}", method=RequestMethod.POST)
+    public ResponseEntity decrement(@PathVariable int productId, @RequestHeader("user-id") int userId){
 
-        // Check if productId exists in the cart table       
-        Optional<Cart> optionalCart = cartRepo.findByProductId(productId);
-        if(optionalCart.isPresent()){
-            Cart cartItem = optionalCart.get();
-            int currentQuantity = cartItem.getQuantity();
-            if (currentQuantity == 1) {
-                // Delete the record from cart table
-                cartRepo.delete(cartItem);
-            } else {
-                // Decrement the quantity by 1
-                cartItem.setQuantity(currentQuantity - 1);
-                cartRepo.save(cartItem);
-            }
-            return ResponseEntity.ok().build();
+        try{
+            service.decrement(productId, userId);
+            return ResponseEntity.ok().build(); // When no exception is thrown means operation is successful.
+        }catch(NotFoundException nfe){
+            nfe.printStackTrace();
+            return ResponseEntity.notFound().build(); // Return 404 if NotFoundException is thrown.
+        }catch(Exception e){
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build(); // Return 500 if any other unexpected exception is thrown.
         }
-
-        return ResponseEntity.badRequest().build();
     }
 
     @RequestMapping(value="/clear", method = RequestMethod.POST)
     public ResponseEntity clear(){
 
         // Check if cart table is empty
-        long count = cartRepo.count();
+        long count = repo.count();
         if(count == 0) {
             return ResponseEntity.notFound().build();
         }
         
         // Delete all cart items
-        cartRepo.deleteAll();
+        repo.deleteAll();
         
         return ResponseEntity.ok().build();
     }
 }
-
-
-
-    
-    
